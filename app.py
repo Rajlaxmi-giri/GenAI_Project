@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 import os ,io
 import json
 from dotenv import load_dotenv
@@ -72,7 +73,7 @@ agent = initialize_agent(
 )
 
 # Streamlit UI
-st.title(" AI-Powered Laptop Assistant ")
+st.title("🛍️ AI-Powered Laptop Assistant ")
 st.write("Ask about laptop specifications, battery life, or performance!")
 
 # User query input
@@ -80,14 +81,35 @@ user_query = st.text_input("Enter your laptop-related question:", "")
 
 if st.button("Get Recommendation"):
     if user_query:
+        # --- Tabs ---
+        tab1, tab2 = st.tabs(["Recommendation", " History"])
         response = agent.run(user_query)
-        st.write("# AI Recommendation")
-        st.write(response)
+        with tab1:
+            st.write("# AI Recommendation")
+            st.write(response)
 
         # Show conversation history
         chat_history = memory.load_memory_variables({})
-        st.write("# Conversation History")
-        st.json(chat_history)
+        with tab2:
+            st.write("# Conversation History")
+
+            try:
+                with open("Searching_history.json", "r", encoding="utf-8") as f:
+                    full_history = json.load(f)
+            except FileNotFoundError:
+                full_history = []
+
+            if full_history:
+                # Show most recent first
+                full_history = sorted(full_history, key=lambda x: x["timestamp"], reverse=True)
+
+                for item in full_history:
+                    st.markdown(f"**🕓 {item['timestamp']}**")
+                    st.markdown(f"- **Query:** {item['query']}")
+                    st.markdown(f"- **Response:** {item['response']}")
+                    st.markdown("---")
+            else:
+                st.info("No conversation history found.")
 
         # Save conversation history
         def save_conversation(history, filename="Searching_history.json"):
@@ -99,15 +121,19 @@ if st.button("Get Recommendation"):
 
             existing_data.extend(history)
 
-
             with open(filename, "w", encoding="utf-8") as file:
                 json.dump(existing_data, file, indent=4)
 
         conversation_history = chat_history["chat_history"]
         history_list = [
-            {"query": message.content, "response": conversation_history[idx + 1].content}
+            {
+                "query": message.content,
+                "response": conversation_history[idx + 1].content,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
             for idx, message in enumerate(conversation_history[:-1]) if idx % 2 == 0
         ]
+
         save_conversation(history_list)
         st.write("Conversation saved to conversation_history.json!")
     else:
