@@ -1,7 +1,0 @@
-streamlit
-pandas
-python-dotenv
-langchain
-sentence-transformers
-cohere
-faiss-cpu
